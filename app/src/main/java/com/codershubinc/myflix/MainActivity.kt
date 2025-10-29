@@ -1,6 +1,5 @@
 package com.codershubinc.myflix
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.ProgressBar
@@ -9,26 +8,23 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.core.net.toUri
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.extractor.DefaultExtractorsFactory
-
 
 class MainActivity : AppCompatActivity() {
 
     private var player: ExoPlayer? = null
-    private var playerView: PlayerView? = null
-    private var errorTextView: TextView? = null
-
-    private var loadingProgressBar: ProgressBar? = null
+    private lateinit var playerView: PlayerView
+    private lateinit var errorTextView: TextView
+    private lateinit var loadingProgressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,49 +39,44 @@ class MainActivity : AppCompatActivity() {
         playerView = findViewById(R.id.playerView)
         errorTextView = findViewById(R.id.errorTextView)
         loadingProgressBar = findViewById(R.id.loadingProgressBar)
-
     }
 
-    @OptIn(UnstableApi::class) private fun initializePlayer() {
-        player = ExoPlayer.Builder(this)
-            .setRenderersFactory(DefaultRenderersFactory(this).setEnableDecoderFallback(true))
-            .build().also { exoPlayer ->
-            playerView?.player = exoPlayer
+    @OptIn(UnstableApi::class)
+    private fun initializePlayer() {
+        // 1. Create a RenderersFactory that prefers the FFmpeg extension
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
+        // 2. Build the ExoPlayer instance using the custom RenderersFactory
+        player = ExoPlayer.Builder(this, renderersFactory).build().also { exoPlayer ->
+            playerView.player = exoPlayer
+
+            // 3. Create a MediaItem from your video URL
             val videoUri = getString(R.string.video_stream_uri).toUri()
+            val mediaItem = MediaItem.fromUri(videoUri)
 
-            val httpDataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
-            httpDataSourceFactory.setDefaultRequestProperties(mapOf(getString(R.string.range_header_key) to getString(R.string.range_header_value)))
-
-            val mediaItem = MediaItem.Builder()
-                .setUri(videoUri)
-                .setDrmConfiguration(null) // No DRM for this example
-                .build()
-
-            // Create a ProgressiveMediaSource with the configured httpDataSourceFactory and DefaultExtractorsFactory
-            val mediaSource = ProgressiveMediaSource.Factory(httpDataSourceFactory,
-                DefaultExtractorsFactory()  ,
-            )
-
-
-
-                .createMediaSource(mediaItem)
-
-
-            exoPlayer.setMediaSource(mediaSource)
-
+            // 4. Set the media item and prepare the player. No need to manually specify an extractor.
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.playWhenReady = true
             exoPlayer.prepare()
-            exoPlayer.playWhenReady = true // Start playback automatically
 
+            // Add a listener to handle player states and errors
             exoPlayer.addListener(object : Player.Listener {
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    when (playbackState) {
+                        Player.STATE_BUFFERING -> loadingProgressBar.visibility = View.VISIBLE
+                        Player.STATE_READY, Player.STATE_ENDED -> loadingProgressBar.visibility = View.GONE
+                        else -> { /* Do nothing */ }
+                    }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
                     super.onPlayerError(error)
-                    playerView?.visibility = View.GONE
-                    errorTextView?.visibility = View.VISIBLE
+                    playerView.visibility = View.GONE
+                    loadingProgressBar.visibility = View.GONE
+                    errorTextView.visibility = View.VISIBLE
                     val errorMessage = getString(R.string.exoplayer_error_prefix) + error.message
-                    print("playbackERR"     )
-                    print( error)
-                    errorTextView?.text = errorMessage
+                    errorTextView.text = errorMessage
                     Toast.makeText(this@MainActivity, errorMessage, Toast.LENGTH_LONG).show()
                 }
             })
@@ -97,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         player = null
     }
 
+    // --- Player Lifecycle Management ---
     override fun onStart() {
         super.onStart()
         initializePlayer()
@@ -104,7 +96,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // In a multi-window environment, `onStart` may not be called, so ensure player is initialized
         if (player == null) {
             initializePlayer()
         }
@@ -112,16 +103,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        player?.playWhenReady = false
+        player?.pause()
     }
 
     override fun onStop() {
         super.onStop()
-        releasePlayer()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
         releasePlayer()
     }
 }

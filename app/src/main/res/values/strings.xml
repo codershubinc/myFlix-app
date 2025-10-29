@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">myFlix</string>
     <string name="hello_world">Hello World!</string>
-    <string name="video_stream_uri">http://10.114.51.23:3000/stream?path=/home/swap/uploads/mvs/The.Tunnel.2019.1080p.BluRay.Hindi.English.DD2.0.x264.ESubs(1).mp4</string>
+    <string name="video_stream_uri">http://10.87.120.23:3000/stream?path=/home/swap/uploads/mvs/Steve.2025.1080p.10Bit.WEB-DL.Hindi.5.1-English.5.1.HEVC.x265-HDHub4u.Ms.mkv</string>
     <string name="range_header_key">Range</string>
     <string name="range_header_value">bytes=0-</string>
     <string name="exoplayer_error_prefix">ExoPlayer error: </string>

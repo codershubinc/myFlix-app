@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.codershubinc.myflix"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.codershubinc.myflix"
@@ -45,11 +43,11 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
 
     // ExoPlayer libraries
-    implementation("androidx.media3:media3-exoplayer:1.8.0")
-    implementation("androidx.media3:media3-exoplayer-dash:1.8.0")
-    implementation("androidx.media3:media3-ui:1.8.0")
-    implementation("androidx.media3:media3-ui-compose:1.8.0")
-    implementation("androidx.media3:media3-exoplayer-dash:1.8.0")
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.dash)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.ui.compose)
+    implementation(libs.androidx.media3.exoplayer.dash)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
